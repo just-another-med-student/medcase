@@ -658,12 +658,7 @@ html,body{height:100%;font-family:var(--font-sans);background:var(--bg);color:va
             <option value="random">Random</option>
             <option value="cardio">Cardiovascular</option>
             <option value="pulm">Respiratory</option>
-            <option value="neuro">Neurology</option>
-            <option value="gastro">Gastroenterology</option>
-            <option value="msk">Musculoskeletal</option>
-            <option value="endo">Endocrine</option>
-            <option value="renal">Renal</option>
-            <option value="haem">Haematology</option>
+            <option value="gastro">Abdominal</option>
           </select>
         </div>
         <div>
@@ -1061,56 +1056,27 @@ async function startSession(){
   showScreen('s-loading');
   document.getElementById('spin-ring').className = 'spin-ring' + (currentMode==='gp'?' blue':'');
 
-  const prompt = `Generate a realistic medical patient case for a Year 1 UniMelb MD student to practise clinical skills.
+  const PCP1 = 'YEAR 1 UNIMELB PCP1 SEM 1 CURRICULUM. You must ONLY generate cases from these presentations and differentials. CARDIOVASCULAR/RESPIRATORY Chest pain: stable angina (exertional pressure heaviness <20min relieved rest/nitrates RF:HTN/cholesterol/DM/smoking/FHx), unstable angina (pressure at rest >20min not relieved), AMI (severe crushing radiation left arm/jaw diaphoresis nausea sense of doom), PE (pleuritic sharp dyspnoea haemoptysis RF:DVT/OCP/immobility/surgery), pericarditis (sharp worse lying flat better leaning forward), aortic dissection (tearing radiating to back), pneumothorax (sudden sharp pleuritic dyspnoea dry cough no fever), pneumonia (pleuritic fever productive cough). RESPIRATORY Dyspnoea: asthma (wheeze episodic triggers: pollen/exercise/cold air/URTI atopy relieved salbutamol), COPD (chronic productive cough morning predominance progressive smoker), LHF (orthopnoea PND peripheral oedema exertional), PE (acute dyspnoea dry cough). RESPIRATORY Cough: URTI/pneumonia (fever productive purulent), asthma (nocturnal wheeze), COPD (chronic morning smoker), lung cancer (haemoptysis weight loss hoarse voice), ACEi-induced (dry persistent on ACEi). ABDOMINAL Abdominal pain: appendicitis (periumbilical migrating RIF anorexia fever nausea rebound), cholecystitis/biliary colic (RUQ radiation right shoulder after fatty meals fever if cholecystitis), peptic ulcer/GORD (epigastric burning worse or relieved by food), pancreatitis (epigastric radiation to back worse lying flat alcohol/gallstones), renal colic (loin-to-groin colicky haematuria), diverticulitis (LIF fever change bowel habit elderly), IBD (chronic blood/mucus diarrhoea cramping weight loss), gastroenteritis (vomiting diarrhoea fever travel/contacts). ABDOMINAL Vomiting: gastroenteritis (acute diarrhoea fever contacts), GORD (epigastric pain after meals), obstruction (bilious absolute constipation distension), pregnancy morning sickness (young female morning). ABDOMINAL Diarrhoea/Constipation: gastroenteritis secretory (watery >1L fever contacts), IBD exudative (bloody mucous small frequent cramping), IBS motility (alternating stress no blood/weight loss), coeliac/lactose osmotic (specific foods bloating stops with fasting), bowel cancer (PR bleeding change bowel habit weight loss elderly). SYSTEM FIELD must be cardio pulm or gastro only. HISTORY FRAMEWORK (mark student on): SQTCRAAF = Site Quality Severity TimeCourse Context Relieving Aggravating AssociatedFeatures then PMHx FHx SocialHx(travel living relationships hobbies pets) Medications(incl OTC CAMs OCP inhalers laxatives) Lifestyle(smoking alcohol drugs) OccupationalHx PatientConcerns.';
+
+  const diffGuide = {
+    beginner: 'BEGINNER: Classic textbook presentation from the PCP1 list. Patient calm cooperative and forthcoming. Single system. Minimal PMH. No red herrings. Most obvious diagnosis. Helpful guiding context notes. Good health literacy fluent English.',
+    intermediate: 'INTERMEDIATE: Mostly typical PCP1 presentation with 1-2 mildly atypical features. Patient cooperative but needs direct questioning. Mild anxiety. 2-3 past conditions with medications. One minor red herring that good history clarifies. Average health literacy.',
+    advanced: 'ADVANCED (Year 1 PCP1 scope only - no new diagnoses): Atypical presentation of a PCP1 diagnosis. Patient is vague anxious distressed or poor historian. May have mild language barrier. Multiple comorbidities. 2-3 deliberate red herrings. Requires systematic SQTCRAAF questioning. Minimal context notes.'
+  };
+
+  const prompt = `Generate a realistic medical patient case for a Year 1 UniMelb MD student (PCP1 Semester 1).
 Setting: ${currentMode==='ward'?'Hospital ward at Royal Melbourne Hospital':'General Practice clinic in Melbourne, Australia'}
-Body system: ${sys==='random'?'any (choose something appropriate for Year 1 students)':sys}
-Difficulty: ${diff}
-Patient age group: ${age==='random'?'any adult age':age}
-
-Use Australian English, Australian drug names (e.g. paracetamol not acetaminophen), Australian context (Medicare, bulk billing for GP, PBS medications, Australian hospital structure).
-
-Return ONLY valid JSON, no markdown fences, no preamble:
-{
-  "name": "Full Australian name",
-  "age": 52,
-  "dob": "12/03/1972",
-  "gender": "Male",
-  "sex": "Male",
-  "occupation": "Plumber",
-  "mrn": "RMH-284910",
-  "ward": "Ward 5B — General Medicine",
-  "consultant": "Dr. Priya Nambiar",
-  "admitDate": "22/05/2026",
-  "system": "cardio",
-  "chiefComplaint": "First-person complaint in one sentence",
-  "vitals": {"bp":"138/88","hr":"96","rr":"18","temp":"37.2","spo2":"97%","pain":"6/10","weight":"84kg"},
-  "hpc": {"onset":"2 days ago","character":"tight, pressure-like","site":"central chest","radiation":"left shoulder","severity":"6/10","associated":["mild diaphoresis","nausea"],"relieving":"rest","exacerbating":"exertion","timing":"intermittent, worsening"},
-  "pmh": "Hypertension diagnosed 2018. Hypercholesterolaemia. Ex-smoker.",
-  "medications": "Perindopril 5mg mane, Rosuvastatin 20mg nocte.",
-  "allergies": "Penicillin — rash",
-  "socialHistory": "Lives with wife in Footscray. Ex-smoker, quit 2015, 15 pack-year history. Alcohol: 10 standard drinks/week. Works as a plumber.",
-  "familyHistory": "Father had MI at 62. Mother has type 2 diabetes.",
-  "gpName": "Dr. Michael Torres",
-  "gpPractice": "Footscray Medical Centre",
-  "medicareNum": "2849 10234 1",
-  "lastGpVisit": "3 months ago",
-  "contextNotes": "2-sentence hint for the student on what to explore without giving away the diagnosis.",
-  "hiddenDiagnosis": "Unstable angina",
-  "hiddenFullHistory": "Detailed background the AI uses to answer questions consistently and realistically. Include all relevant positives and negatives.",
-  "suggestedInvestigations": ["ECG","Troponin","FBC","U&E","CXR"],
-  "investigationResults": {
-    "ECG": {"status":"abnormal","result":"Sinus rhythm 96 bpm. ST depression 1mm in leads V4–V6. No acute STEMI changes. T-wave flattening in lateral leads."},
-    "Troponin": {"status":"normal","result":"High-sensitivity Troponin I: 0.018 μg/L (ref <0.026). Within normal limits on serial testing."},
-    "FBC": {"status":"normal","result":"Hb 148 g/L, WBC 9.4 ×10⁹/L, Plt 218 ×10⁹/L. All within normal limits."},
-    "U&E": {"status":"normal","result":"Na 139 mmol/L, K 4.2 mmol/L, Cr 91 μmol/L, eGFR 72 mL/min/1.73m². Normal renal function."},
-    "CXR": {"status":"normal","result":"PA projection. Cardiac size normal. Clear lung fields bilaterally. No consolidation, effusion or pneumothorax."}
-  },
-  "quickQuestions": ["Can you tell me more about the chest pain?","When exactly did this start?","Have you had anything like this before?"]
-}`;
+System: ${sys==='random'?'choose randomly from cardio pulm or gastro':sys==='cardio'?'cardio':sys==='pulm'?'pulm':sys==='gastro'?'gastro':'cardio'}
+Patient age: ${age==='random'?'any adult':age}
+Difficulty: ${diffGuide[diff]||diffGuide.beginner}
+Curriculum: ${PCP1}
+Rules: Australian English. Australian drug names (paracetamol not acetaminophen). Medicare PBS bulk billing context. Real Melbourne suburbs. hiddenFullHistory max 3-4 sentences. Each investigation result max 1 sentence. system field must be cardio pulm or gastro.
+Return ONLY valid compact JSON no markdown no line breaks inside strings:
+{"name":"Full Australian name","age":52,"dob":"12/03/1972","gender":"Male","sex":"Male","occupation":"Plumber","mrn":"RMH-284910","ward":"Ward 5B General Medicine","consultant":"Dr. Priya Nambiar","admitDate":"22/05/2026","system":"cardio","chiefComplaint":"I have had chest pain for two days","vitals":{"bp":"138/88","hr":"96","rr":"18","temp":"37.2","spo2":"97%","pain":"6/10","weight":"84kg"},"hpc":{"onset":"2 days ago","character":"tight pressure-like","site":"central chest","radiation":"left shoulder","severity":"6/10","associated":["diaphoresis","nausea"],"relieving":"rest","exacerbating":"exertion","timing":"intermittent worsening"},"pmh":"Hypertension 2018. Hypercholesterolaemia.","medications":"Perindopril 5mg mane. Rosuvastatin 20mg nocte.","allergies":"Penicillin rash","socialHistory":"Lives in Footscray with wife. Ex-smoker 15 pack-years. Alcohol 10 drinks/week.","familyHistory":"Father MI at 62.","gpName":"Dr. Michael Torres","gpPractice":"Footscray Medical Centre","medicareNum":"2849 10234 1","lastGpVisit":"3 months ago","contextNotes":"Focus on the character and timing of the chest pain and relevant risk factors.","hiddenDiagnosis":"Unstable angina","hiddenFullHistory":"Crescendo chest pain 2 days worse on exertion and at rest. HTN and hypercholesterolaemia. Denies syncope or palpitations. Pain distinct from musculoskeletal.","patientPersonality":"calm and cooperative","suggestedInvestigations":["ECG","Troponin","FBC","U&E","CXR"],"investigationResults":{"ECG":{"status":"abnormal","result":"Sinus tachycardia 96bpm. ST depression 1mm V4-V6."},"Troponin":{"status":"normal","result":"hs-TnI 0.018 ug/L ref less than 0.026. Normal."},"FBC":{"status":"normal","result":"Hb 148 WBC 9.4 Plt 218. Normal."},"U&E":{"status":"normal","result":"Na 139 K 4.2 Cr 91 eGFR 72. Normal."},"CXR":{"status":"normal","result":"Clear lung fields. Normal cardiac silhouette."}},"quickQuestions":["Can you describe what you are feeling?","When did this start?","Have you had this before?"]}`;
 
   try{
     const raw = await claude([{role:'user',content:prompt}],
-      'You are a medical education AI generating realistic Australian patient cases for UniMelb MD students. Return only valid JSON, no markdown.');
+      'You are a medical education AI generating realistic Australian patient cases for UniMelb MD students. Return only valid JSON, no markdown.',3000);
     caseData = JSON.parse(raw.replace(/```json|```/g,'').trim());
     transcript = [];
     orderedTests = [];
@@ -1135,7 +1101,7 @@ Return ONLY valid JSON, no markdown fences, no preamble:
 }
 
 // ── CLAUDE API ────────────────────────────────────────────────────────
-async function claude(messages, system, maxTokens=1200){
+async function claude(messages, system, maxTokens=2000){
   const r = await fetch('/.netlify/functions/claude',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -1546,7 +1512,7 @@ Return ONLY valid JSON, no markdown:
 }`;
 
   try{
-    const raw = await claude([{role:'user',content:prompt}],'You are a clinical educator at UniMelb. Return only JSON, no markdown.',1000);
+    const raw = await claude([{role:'user',content:prompt}],'You are a clinical educator at UniMelb Medical School marking a Year 1 PCP1 history-taking session. Assess using the SQTCRAAF framework (Site Quality Severity/TimeCourse Context Relieving Aggravating AssociatedFeatures) plus PMHx FHx SocialHx Medications Lifestyle Occupational history and Patient concerns. Return only JSON, no markdown.',1000);
     const fb = JSON.parse(raw.replace(/```json|```/g,'').trim());
     // Save session
     sessions.push({mode:currentMode,system:caseData.system,diagnosis:caseData.hiddenDiagnosis,score:fb.score,date:Date.now(),xp:fb.xpEarned||0});
