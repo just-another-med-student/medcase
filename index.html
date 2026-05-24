@@ -1142,6 +1142,10 @@ async function claude(messages, system, maxTokens=1200){
     body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:maxTokens,system,messages})
   });
   const d = await r.json();
+  if(!d || !d.content){
+    console.error('API error response:', JSON.stringify(d));
+    throw new Error((d.error && d.error.message) || 'API call failed: ' + JSON.stringify(d));
+  }
   return d.content.map(b=>b.text||'').join('');
 }
 
