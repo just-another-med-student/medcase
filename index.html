@@ -1052,27 +1052,27 @@ async function claude(messages,system,maxTokens=1200){
 // ── GENERATE CASE ─────────────────────────────────────────────────────
 async function generateCase(){
     const diffMap={
-    beginner:'BEGINNER: Classic textbook PCP1 diagnosis. Patient warm and chatty, opening response is a natural 3-4 sentence story with emotion and relevant details. Good health literacy. No red herrings.',
-    intermediate:'INTERMEDIATE: Mostly typical with 1-2 atypical features. Patient needs direct open questions. Mild anxiety. 2-3 comorbidities. One minor red herring.',
-    advanced:'ADVANCED Year 1 PCP1 scope: Atypical presentation. Patient guarded or vague, minimal upfront info, needs careful questioning. Multiple comorbidities. 2-3 red herrings.'
+    beginner:'Classic textbook case. Patient warm and forthcoming, volunteers details naturally. No red herrings.',
+    intermediate:'Mostly typical with 1-2 atypical features. Patient needs direct questioning. Mild anxiety. One red herring.',
+    advanced:'Atypical presentation. Patient vague or guarded, needs careful questioning. Multiple red herrings.'
   };
-  const PCP1='PCP1 diagnoses only: cardio(stable angina,unstable angina,NSTEMI,STEMI,PE,pericarditis,aortic dissection,pneumothorax,pneumonia); pulm(asthma,COPD,LHF,PE,pneumonia,lung cancer,ACEi cough); gastro(appendicitis,cholecystitis,biliary colic,peptic ulcer,GORD,pancreatitis,renal colic,diverticulitis,IBD,gastroenteritis,bowel cancer). System field must be cardio pulm or gastro only.';
-  const NAMES='Diverse Melbourne patients: Anglo(James Smith,Sarah Johnson,Emma Wilson,Michael Brown,David Taylor,Claire Murphy), Greek(Eleni Papadopoulos,Maria Stavros,Kostas Dimitriou), Italian(Marco Russo,Giulia Ferrari,Antonio Conti), Vietnamese(Nguyen Van Minh,Thi Thu Tran,Phuong Le), Chinese(Wei Chen,Jing Li,Xiaoming Zhang), Indian(Priya Sharma,Arjun Patel,Ananya Singh), Lebanese(Leila Khoury,Omar Haddad), Indigenous(Marlene Cooper,Damien Ngunawal). Choose randomly. Use appropriate Melbourne suburb and cultural context.';
-  const JOBS='Varied occupations: nurse,teacher,plumber,electrician,accountant,chef,university student,retiree,shop owner,engineer,warehouse worker,childcare worker,IT professional,taxi driver,hairdresser,pharmacist,artist,lawyer,delivery driver,barista,social worker,mechanic,real estate agent.';
-  const VITALS='Make vitals clinically appropriate: PE needs tachycardia HR above 100 and SpO2 below 95. Active infection needs temp above 38 and tachycardia. Respiratory distress needs elevated RR and low SpO2. Pain score matches severity. Weight realistic for patient age and build.';
 
-  const prompt = `Generate a realistic patient case for a Year 1 UniMelb MD student.
-Setting: ${currentMode==='ward'?'Hospital ward Royal Melbourne Hospital':'General Practice clinic Melbourne Australia'}
-System: ${sessionConfig.sys==='random'?'choose randomly from cardio pulm or gastro':sessionConfig.sys==='cardio'?'cardio':sessionConfig.sys==='pulm'?'pulm':'gastro'}
-Patient age: ${sessionConfig.age==='random'?'any adult':sessionConfig.age}
+  const prompt=`UniMelb Year 1 MD patient case.
+Setting: ${currentMode==='ward'?'Royal Melbourne Hospital ward':'Melbourne GP clinic'}
+System: ${sessionConfig.sys==='random'?'pick cardio OR pulm OR gastro randomly':sessionConfig.sys==='cardio'?'cardio':sessionConfig.sys==='pulm'?'pulm':'gastro'}
+Age: ${sessionConfig.age==='random'?'any adult':sessionConfig.age}
 Difficulty: ${diffMap[sessionConfig.diff]||diffMap.beginner}
-${PCP1}
-${NAMES}
-${JOBS}
-${VITALS}
-Australian English only. Australian drug names (paracetamol not acetaminophen). Medicare PBS context. Real Melbourne suburbs. Keep hiddenFullHistory to 3-4 sentences. Investigation results: exact values and reference ranges for bloods, brief descriptive report for imaging.
-Return ONLY valid compact JSON no markdown:
-{"name":"Full diverse Australian name","age":52,"dob":"15/06/1972","gender":"Female","sex":"Female","occupation":"Teacher","suburb":"Richmond","mrn":"RMH-374829","ward":"Ward 6A General Medicine","consultant":"Dr. Priya Nambiar","admitDate":"25/05/2026","system":"cardio","chiefComplaint":"Natural 1-2 sentence opening as patient would say it","vitals":{"bp":"142/88","hr":"94","rr":"18","temp":"37.1","spo2":"97%","pain":"5/10","weight":"68kg"},"hpc":{"onset":"3 days","character":"tight pressure","site":"central chest","radiation":"left arm","severity":"5/10","associated":["mild dyspnoea"],"relieving":"rest","exacerbating":"exertion","timing":"episodic worsening"},"pmh":"Hypertension 2019.","medications":"Amlodipine 5mg mane.","allergies":"NKDA","socialHistory":"Lives in Richmond. Non-smoker. Social drinker.","familyHistory":"Father MI age 58.","gpName":"Dr. Sarah Chen","gpPractice":"Richmond Medical Centre","medicareNum":"4829 10384 2","lastGpVisit":"6 weeks ago","contextNotes":"Focus on exertional nature and cardiac risk factors.","hiddenDiagnosis":"Unstable angina","hiddenFullHistory":"Escalating chest tightness 3 days now at rest and exertion. Hypertension poorly controlled. Strong family history. Denies syncope palpitations or leg swelling.","patientPersonality":"${sessionConfig.diff==='beginner'?'warm chatty natural storyteller volunteers details freely':sessionConfig.diff==='intermediate'?'cooperative but needs prompting shows mild anxiety':'guarded and vague gives minimal info upfront needs careful questioning'}","suggestedInvestigations":["ECG","Troponin","FBC","U&E","CXR"],"investigationResults":{"ECG":{"status":"abnormal","result":"Sinus rhythm 94bpm. ST depression 0.5-1mm V4-V6. No STEMI.","refRange":"Normal sinus rhythm no ischaemic changes"},"Troponin":{"status":"normal","result":"hs-TnI: 0.019 ug/L. Normal on serial testing.","refRange":"Reference less than 0.026 ug/L"},"FBC":{"status":"normal","result":"Hb 131 g/L. WBC 8.9. Plt 224 x10^9/L.","refRange":"Hb 120-160. WBC 4-11. Plt 150-400 x10^9/L"},"U&E":{"status":"normal","result":"Na 138. K 4.0. Cr 78 umol/L. eGFR greater than 60.","refRange":"Na 135-145. K 3.5-5.0. Cr 45-90 umol/L"},"CXR":{"status":"normal","result":"Clear lungs. Normal cardiac silhouette. No consolidation.","refRange":"Descriptive"}},"quickQuestions":["What brought you in today?","Can you describe what you are feeling?","When did this start?"]}`;
+
+DIAGNOSES (use only these): cardio=stable/unstable angina,NSTEMI,STEMI,PE,pericarditis,aortic dissection,pneumothorax,pneumonia. pulm=asthma,COPD,LHF,PE,pneumonia,lung cancer,ACEi cough. gastro=appendicitis,cholecystitis,biliary colic,peptic ulcer,GORD,pancreatitis,renal colic,diverticulitis,IBD,gastroenteritis,bowel cancer.
+
+PATIENT: Diverse Melbourne name (Anglo/Greek/Italian/Vietnamese/Chinese/Indian/Lebanese/Indigenous). Realistic occupation (nurse,teacher,plumber,accountant,chef,student,retiree,engineer,barista,mechanic etc). Appropriate Melbourne suburb.
+
+VITALS: Must match diagnosis. PE=HR>100+SpO2<95. Infection=Temp>38+tachycardia. Resp distress=RR>20+low SpO2. Pain matches severity.
+
+Australian English. Australian drugs (paracetamol not acetaminophen). Medicare/PBS context.
+
+Return compact JSON only, no markdown:
+{"name":"","age":0,"dob":"","gender":"","sex":"","occupation":"","suburb":"","mrn":"","ward":"","consultant":"","admitDate":"","system":"","chiefComplaint":"","vitals":{"bp":"","hr":"","rr":"","temp":"","spo2":"","pain":"","weight":""},"hpc":{"onset":"","character":"","site":"","radiation":"","severity":"","associated":[],"relieving":"","exacerbating":"","timing":""},"pmh":"","medications":"","allergies":"","socialHistory":"","familyHistory":"","gpName":"","gpPractice":"","medicareNum":"","lastGpVisit":"","contextNotes":"","hiddenDiagnosis":"","hiddenFullHistory":"3-4 sentences max","patientPersonality":"${sessionConfig.diff==='beginner'?'warm chatty forthcoming':sessionConfig.diff==='intermediate'?'cooperative needs prompting':'guarded vague needs systematic questioning'}","suggestedInvestigations":[],"investigationResults":{"ECG":{"status":"","result":"","refRange":""},"Troponin":{"status":"","result":"","refRange":""},"FBC":{"status":"","result":"","refRange":""},"U&E":{"status":"","result":"","refRange":""},"CXR":{"status":"","result":"","refRange":""}},"quickQuestions":["","",""]}`;
   try{
     const raw=await claude([{role:'user',content:prompt}],'You are a medical education AI. Return only valid JSON, no markdown.');
     const clean=raw.replace(/```json|```/g,'').trim();
