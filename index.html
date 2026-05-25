@@ -1020,6 +1020,7 @@ function finishProgress(){
 }
 
 async function startSession(){
+  currentMode = 'ward';
   sessionConfig={
     sys: document.getElementById('sys-sel').value,
     diff: document.getElementById('diff-sel').value,
@@ -1051,6 +1052,10 @@ async function claude(messages,system,maxTokens=1200){
     body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:maxTokens,system,messages})
   });
   const d=await r.json();
+  if(!d||!d.content){
+    console.error('API error:',JSON.stringify(d));
+    throw new Error((d&&d.error&&d.error.message)||'API call failed: '+JSON.stringify(d));
+  }
   return d.content.map(b=>b.text||'').join('');
 }
 
@@ -1064,9 +1069,9 @@ async function generateCase(){
 
   const prompt=`UniMelb Year 1 MD patient case.
 Setting: ${currentMode==='ward'?'Royal Melbourne Hospital ward':'Melbourne GP clinic'}
-System: ${sessionConfig.sys==='random'?'pick cardio OR pulm OR gastro randomly':sessionConfig.sys==='cardio'?'cardio':sessionConfig.sys==='pulm'?'pulm':'gastro'}
-Age: ${sessionConfig.age==='random'?'any adult':sessionConfig.age}
-Difficulty: ${diffMap[sessionConfig.diff]||diffMap.beginner}
+System: ${(sessionConfig.sys||'random')==='random'?'pick cardio OR pulm OR gastro randomly':sessionConfig.sys==='cardio'?'cardio':sessionConfig.sys==='pulm'?'pulm':'gastro'}
+Age: ${(sessionConfig.age||'random')==='random'?'any adult':sessionConfig.age}
+Difficulty: ${diffMap[sessionConfig.diff||'intermediate']||diffMap.intermediate}
 
 DIAGNOSES (use only these): cardio=stable/unstable angina,NSTEMI,STEMI,PE,pericarditis,aortic dissection,pneumothorax,pneumonia. pulm=asthma,COPD,LHF,PE,pneumonia,lung cancer,ACEi cough. gastro=appendicitis,cholecystitis,biliary colic,peptic ulcer,GORD,pancreatitis,renal colic,diverticulitis,IBD,gastroenteritis,bowel cancer.
 
@@ -1077,7 +1082,7 @@ VITALS: Must match diagnosis. PE=HR>100+SpO2<95. Infection=Temp>38+tachycardia. 
 Australian English. Australian drugs (paracetamol not acetaminophen). Medicare/PBS context.
 
 Return compact JSON only, no markdown:
-{"name":"","age":0,"dob":"","gender":"","sex":"","occupation":"","suburb":"","mrn":"","ward":"","consultant":"","admitDate":"","system":"","chiefComplaint":"","vitals":{"bp":"","hr":"","rr":"","temp":"","spo2":"","pain":"","weight":""},"hpc":{"onset":"","character":"","site":"","radiation":"","severity":"","associated":[],"relieving":"","exacerbating":"","timing":""},"pmh":"","medications":"","allergies":"","socialHistory":"","familyHistory":"","gpName":"","gpPractice":"","medicareNum":"","lastGpVisit":"","contextNotes":"","hiddenDiagnosis":"","hiddenFullHistory":"3-4 sentences max","patientPersonality":"${sessionConfig.diff==='beginner'?'warm chatty forthcoming':sessionConfig.diff==='intermediate'?'cooperative needs prompting':'guarded vague needs systematic questioning'}","suggestedInvestigations":[],"investigationResults":{"ECG":{"status":"","result":"","refRange":""},"Troponin":{"status":"","result":"","refRange":""},"FBC":{"status":"","result":"","refRange":""},"U&E":{"status":"","result":"","refRange":""},"CXR":{"status":"","result":"","refRange":""}},"quickQuestions":["","",""]}`;
+{"name":"","age":0,"dob":"","gender":"","sex":"","occupation":"","suburb":"","mrn":"","ward":"","consultant":"","admitDate":"","system":"","chiefComplaint":"","vitals":{"bp":"","hr":"","rr":"","temp":"","spo2":"","pain":"","weight":""},"hpc":{"onset":"","character":"","site":"","radiation":"","severity":"","associated":[],"relieving":"","exacerbating":"","timing":""},"pmh":"","medications":"","allergies":"","socialHistory":"","familyHistory":"","gpName":"","gpPractice":"","medicareNum":"","lastGpVisit":"","contextNotes":"","hiddenDiagnosis":"","hiddenFullHistory":"3-4 sentences max","patientPersonality":"cooperative","suggestedInvestigations":[],"investigationResults":{"ECG":{"status":"","result":"","refRange":""},"Troponin":{"status":"","result":"","refRange":""},"FBC":{"status":"","result":"","refRange":""},"U&E":{"status":"","result":"","refRange":""},"CXR":{"status":"","result":"","refRange":""}},"quickQuestions":["","",""]}`;
   try{
     const raw=await claude([{role:'user',content:prompt}],'You are a medical education AI. Return only valid JSON, no markdown.');
     const clean=raw.replace(/```json|```/g,'').trim();
@@ -1716,11 +1721,30 @@ function stopTimer(){if(timerInterval){clearInterval(timerInterval);timerInterva
 
 // ── RETRY ─────────────────────────────────────────────────────────────
 function tryAgain(){
-  if(!sessionConfig||!Object.keys(sessionConfig).length) return goSetup(currentMode);
-  showScreen('s-loading');
-  generateCase();
+  if(!sessionConfig||!Object.keys(sessionConfig).length) return goSetup('voice');
+  showScreen('loading-screen');
+  startProgress();
+  generateCase().then(()=>{
+    if(mode==='voice') launchVoiceSession();
+    else launchDiffSession();
+  }).catch(e=>{
+    console.error(e);
+    alert('Error. Please try again.');
+    goLanding();
+  });
 }
-function retrySession(){goSetup(mode);}
+function retrySession(){
+  showScreen('loading-screen');
+  startProgress();
+  generateCase().then(()=>{
+    if(mode==='voice') launchVoiceSession();
+    else launchDiffSession();
+  }).catch(e=>{
+    console.error(e);
+    alert('Error generating case. Please try again.');
+    goLanding();
+  });
+}
 
 // ── UTILS ─────────────────────────────────────────────────────────────
 function escHtml(s){
