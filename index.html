@@ -1041,8 +1041,7 @@ async function startSession(){
   startProgress();
   document.getElementById('loader-ring').className='pulse-ring'+(mode==='diff'?' blue':'');
   await generateCase();
-  if(mode==='voice') launchVoiceSession();
-  else launchDiffSession();
+  // Session launched inside generateCase after success
 }
 
 // ── CLAUDE API ────────────────────────────────────────────────────────
@@ -1089,6 +1088,9 @@ Return compact JSON only, no markdown:
     const clean=raw.replace(/```json|```/g,'').trim();
     caseData=JSON.parse(clean);
     finishProgress();
+    await new Promise(r=>setTimeout(r,300));
+    if(mode==='voice') launchVoiceSession();
+    else launchDiffSession();
   }catch(e){
     console.error(e);
     alert('Error generating case. Please try again.');
@@ -1254,28 +1256,6 @@ async function startRecordingWithSpeechAPI(){
 }
 
 // Override toggleMic to use Speech API
-async function toggleMic(){
-  if(isSpeaking) return;
-  if(isRecording){
-    if(speechRecog) speechRecog.stop();
-    isRecording=false;
-    setMicState('idle');
-    document.getElementById('mic-hint').textContent='Tap to speak';
-  }else{
-    await startRecordingWithSpeechAPI();
-  }
-}
-
-function setMicState(s){
-  const btn=document.getElementById('mic-btn');
-  const icon=document.getElementById('mic-icon');
-  btn.className='mic-btn';
-  if(s==='recording'){btn.classList.add('recording');icon.className='ti ti-microphone-off'}
-  else if(s==='speaking'){btn.classList.add('speaking');icon.className='ti ti-volume'}
-  else if(s==='processing'){btn.classList.add('processing');icon.className='ti ti-loader'}
-  else{icon.className='ti ti-microphone'}
-}
-
 async function getPatientResponse(userText){
   const phase=voicePhases[voicePhaseIndex];
   let systemPrompt='';
@@ -1586,7 +1566,7 @@ async function getDiffFeedback(){
   if(mgmtImmEl) inputs.mgmtImmediate=mgmtImmEl.value;
   const mgmtDefEl=document.getElementById('mgmt-definitive');
   if(mgmtDefEl) inputs.mgmtDefinitive=mgmtDefEl.value;
-  const d1=document.getElementById('diff-1');
+  const d1=document.getElementById('diff-1')||{};
   if(d1) inputs.differentials=[1,2,3].map(n=>(document.getElementById(`diff-${n}`)||{}).value||'').filter(Boolean);
   const ratEl=document.getElementById('diff-rationale');
   if(ratEl) inputs.rationale=ratEl.value;
@@ -1748,6 +1728,49 @@ function retrySession(){
 }
 
 // ── UTILS ─────────────────────────────────────────────────────────────
+
+function openPastSession(idx){
+  const s=sessions[idx];if(!s) return;
+  const modal=document.getElementById('past-modal');if(!modal) return;
+  document.getElementById('past-modal-title').textContent=(s.mode==='ward'?'Hospital Ward':'GP Clinic')+' · '+(s.system||'General');
+  let b='<div style="font-size:13px;color:var(--muted);margin-bottom:1rem">'+new Date(s.date).toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+'</div>';
+  b+='<div style="display:flex;align-items:center;gap:12px;margin-bottom:1.25rem;padding:12px 16px;background:rgba(255,255,255,0.04);border-radius:8px;border:1px solid rgba(255,255,255,0.07)">'+
+    '<div style="font-size:26px;font-weight:500;color:'+(s.score>=7?'var(--accent)':s.score>=5?'var(--amber)':'var(--red)')+'">'+
+    (s.score||'—')+'/10</div>'+
+    '<div style="font-size:13px;color:var(--text)">'+(s.overallComment||'Session completed')+'</div></div>';
+  if(s.feedbackSections){
+    s.feedbackSections.forEach(sec=>{
+      b+='<div style="margin-bottom:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;overflow:hidden">'+
+        '<div style="padding:10px 14px;font-size:12px;font-weight:600;border-bottom:1px solid rgba(255,255,255,0.07)">'+escHtml(sec.title)+'</div>'+
+        '<div style="padding:12px 14px;font-size:13px;color:var(--muted);line-height:1.8">'+escHtml(sec.body||'')+'</div></div>';
+    });
+  }
+  b+='<div style="display:flex;gap:8px;margin-top:1rem">'+
+    '<button onclick="document.getElementById('past-modal').classList.remove('open')" style="padding:8px 16px;border-radius:8px;border:1px solid rgba(255,255,255,0.13);background:transparent;color:var(--text);cursor:pointer;font-family:var(--font-sans)">Close</button>'+
+    '</div>';
+  document.getElementById('past-modal-body').innerHTML=b;
+  modal.classList.add('open');
+}
+
+
+function setMicState(s){
+  const btn=document.getElementById('mic-btn');
+  const icon=document.getElementById('mic-icon');
+  if(!btn||!icon) return;
+  btn.className='mic-btn';
+  if(s==='recording'){btn.classList.add('recording');icon.className='ti ti-microphone-off';}
+  else if(s==='speaking'){btn.classList.add('speaking');icon.className='ti ti-volume';}
+  else if(s==='processing'){btn.classList.add('processing');icon.className='ti ti-loader';}
+  else if(s==='paused'){btn.classList.add('paused');icon.className='ti ti-player-pause';}
+  else{icon.className='ti ti-microphone';}
+}
+
+function switchInvCat(cat){
+  activeInvCat=cat;
+  buildInvPanel();
+}
+
+function rnd(arr){return arr[Math.floor(Math.random()*arr.length)];}
 function escHtml(s){
   if(!s) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
